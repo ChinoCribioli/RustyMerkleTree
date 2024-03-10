@@ -90,13 +90,20 @@ impl MerkleTree {
         interval.0 <= index && index <= interval.1
     }
 
-    fn get_recursive_path(node: Node, index: usize) -> Vec<u64> {
-        if node.interval.0 == index && index == node.interval.1 {
+    fn get_recursive_path(node: Node, index: usize) -> Vec<(u64)> {
+        if ! Self::in_range(index, node.interval) {
+            panic!("Index out of correct path");
+        }
+        if node.interval.0 == node.interval.1 {
             return Vec::new();
         };
-        if Self::in_range(index, node.left.expect("Node without left child").interval) {
+        if Self::in_range(index, node.left.clone().expect("Node without left child").interval) {
             let mut previous_path = Self::get_recursive_path(*node.left.unwrap(), index);
             previous_path.push(node.right.unwrap().node_hash);
+            return previous_path;
+        } else {
+            let mut previous_path = Self::get_recursive_path(*node.right.unwrap(), index);
+            previous_path.push(node.left.unwrap().node_hash);
             return previous_path;
         }
 
@@ -106,7 +113,6 @@ impl MerkleTree {
     pub fn get_with_proof(self, index: usize) -> (i32, Vec<u64>) {
         let value = self.values[index].expect("There is no value at that index");
         let mut path = Self::get_recursive_path(*self.root, index);
-        path.reverse();
         (value, path)
     }
 
@@ -117,41 +123,30 @@ fn main() {
     // * Hacer un sistema de testing
     // * Chequear la privacidad de las cosas (basically que no puedas acceder a los valores del mt con otra cosa que no sea get_with_proof)
     // * Refactorear para poder hacer un MT con tipos abstractos (Es decir, poner <T> en todos los metodos).
-    
+
     let vec: Vec<i32> = vec![0,3,4,15];
     let mut mt = MerkleTree::new();
-    println!("root of the new tree: {:?}", mt.commit(vec.clone()));
+    let root_hash = mt.commit(vec);
+    println!("root of the new tree: {:?}", root_hash);
+
+    let query_result = mt.get_with_proof(1);
+
+    assert_eq!(query_result.0, 3);
+    let mut hasher = DefaultHasher::new();
+    Some(query_result.0).hash(&mut hasher);
+    for h in query_result.1.iter() {
+        println!("{}, hash hasta ahora: {}",*h, hasher.finish()); // el problema esta en el orden en el que hasheas cosas.
+        h.hash(&mut hasher);
+    }
+    assert_eq!(hasher.finish(), root_hash);
+
     
-    // let mut mt = MerkleTree {roothash: "in hash".to_string()};
-    // let mut root_name = "".to_string();
-    // let _ = io::stdin().read_line(&mut root_name);
-    // mt.set_hash(root_name);
-    // println!("{}", mt.commit());
     // let mut n1: Node = Node {
     //     name: "nodo 1",
     //     child: None
     // };
-    // let mut n2: Node = Node {
-    //     name: "nodo 2",
-    //     child: None
-    // };
-    // let n3: Node = Node {
-    //     name: "nodo 3",
-    //     child: None
-    // };
-    // n2.child = Some(&n3);
-    // n1.child = Some(&n2);
     // print!("n1 usa {} bytes\n", mem::size_of_val(&n1));
-    // print!("n2 usa {} bytes\n", mem::size_of_val(&n2));
-    // print!("n3 usa {} bytes\n", mem::size_of_val(&n3));
     // println!("\n{:?}", &n1);
     // let _para_debug = mem::size_of_val(n3.name);
-
-    // let mut hasher = DefaultHasher::new();
-    // 7920.hash(&mut hasher);
-    // "".hash(&mut hasher);
-    // n2.name.hash(&mut hasher);
-    // ().hash(&mut hasher);
-    // println!("Hash is {:x}\n", hasher.finish());
 
 }
