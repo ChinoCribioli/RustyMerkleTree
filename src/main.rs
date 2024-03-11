@@ -7,7 +7,7 @@ use std::default;
 use std::io;
 use std::mem;
 use std::hash::{DefaultHasher, Hash, Hasher};
-
+use std::thread::current;
 
 #[derive(Default, Debug, Clone)]
 pub struct Node {
@@ -33,7 +33,7 @@ impl MerkleTree {
     }
     
     pub fn commit(&mut self, values: Vec<i32>) -> u64 {
-    	assert!(self.values.len() == 0, "Cannot initialize a non-empty tree!");
+        assert!(self.values.len() == 0, "Cannot initialize a non-empty tree!");
         
         // We populate the self.values array, padding it to reach a power of 2 length
         for value in values.iter() {
@@ -57,7 +57,6 @@ impl MerkleTree {
                 right: None,
             };
             nodes.push(Box::new(node.clone()));
-            println!("nodo de intervalo {:?} tiene hash: {}", node.interval, node.node_hash);
         }
         
         while nodes.len() > 1 {
@@ -75,7 +74,7 @@ impl MerkleTree {
                     left: Some(left_node.clone()),
                     right: Some(right_node.clone()),
                 };
-                println!("nodo de intervalo {:?} tiene hash: {}",new_node.interval, new_node.node_hash);
+                // println!("nodo de intervalo {:?} tiene hash: {}",new_node.interval, new_node.node_hash);
                 left_node.parent = Some(Box::new(new_node.clone()));
                 right_node.parent = Some(Box::new(new_node.clone()));
                 new_level.push(Box::new(new_node.clone()));
@@ -134,11 +133,21 @@ fn main() {
     assert_eq!(query_result.0, 3);
     let mut hasher = DefaultHasher::new();
     Some(query_result.0).hash(&mut hasher);
+    let mut current_hash = hasher.finish();
+    let mut index = 1;
     for h in query_result.1.iter() {
-        println!("{}, hash hasta ahora: {}",*h, hasher.finish()); // el problema esta en el orden en el que hasheas cosas.
-        h.hash(&mut hasher);
+        let mut hasher = DefaultHasher::new();
+        if (index & 1) != 0 {
+            h.hash(&mut hasher);
+            current_hash.hash(&mut hasher);
+        } else {
+            current_hash.hash(&mut hasher);
+            h.hash(&mut hasher);
+        }
+        current_hash = hasher.finish();
+        index /= 2;
     }
-    assert_eq!(hasher.finish(), root_hash);
+    assert_eq!(current_hash, root_hash);
 
     
     // let mut n1: Node = Node {
