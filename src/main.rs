@@ -3,6 +3,7 @@
 #![allow(unused_imports)]
 #![allow(unused)]
 
+// use core::panicking::panic;
 use std::default;
 use std::io;
 use std::mem;
@@ -18,6 +19,7 @@ pub struct Node {
     right: Option<Box<Node>>,
 }
 
+#[derive(Default, Debug, Clone)]
 pub struct MerkleTree {
     root: Box<Node>,
     values: Vec<Option<i32>>,
@@ -89,10 +91,13 @@ impl MerkleTree {
         interval.0 <= index && index <= interval.1
     }
 
-    fn get_recursive_path(node: Node, index: usize) -> Vec<(u64)> {
-        if ! Self::in_range(index, node.interval) {
-            panic!("Index out of correct path");
+    fn check_index_range(self, index: usize) {
+        if index >= self.values.len() {
+            panic!("Index out of range of the tree.");
         }
+    }
+
+    fn get_recursive_path(node: Node, index: usize) -> Vec<(u64)> {
         if node.interval.0 == node.interval.1 {
             return Vec::new();
         };
@@ -105,14 +110,38 @@ impl MerkleTree {
             previous_path.push(node.left.unwrap().node_hash);
             return previous_path;
         }
-
-        Vec::new()
     }
     
     pub fn get_with_proof(self, index: usize) -> (i32, Vec<u64>) {
+        self.clone().check_index_range(index);
         let value = self.values[index].expect("There is no value at that index");
         let mut path = Self::get_recursive_path(*self.root, index);
         (value, path)
+    }
+
+    fn recalculate_hashes(self, mut node: Box<Node>, index: usize) {
+        if node.interval.0 == node.interval.1 {
+            let mut hasher = DefaultHasher::new();
+            self.values[index].hash(&mut hasher);
+            node.node_hash = hasher.finish();
+            return;
+        };
+        if Self::in_range(index, node.clone().left.expect("Node without left child").interval) {
+            self.recalculate_hashes(node.clone().left.unwrap(), index);
+        } else {
+            self.recalculate_hashes(node.clone().right.unwrap(), index);
+        }
+        let mut hasher = DefaultHasher::new();
+        node.left.unwrap().node_hash.hash(&mut hasher);
+        node.right.unwrap().node_hash.hash(&mut hasher);
+        node.node_hash = hasher.finish();
+    }
+
+    pub fn change_value(&mut self, index: usize, new_value: i32) -> u64 {
+        self.clone().check_index_range(index);
+        self.values[index] = Some(new_value);
+        self.clone().recalculate_hashes(self.clone().root, index);
+        self.root.node_hash
     }
 
 }
@@ -120,34 +149,49 @@ impl MerkleTree {
 fn main() {
     // TODO:
     // * Hacer un sistema de testing
+    // * Sacar los hashers a un metodo extra que sea tipo hash(a: T, b: T) y te devuelve el hash. El valor b puede ser opcional para hashear cosas solas
     // * Chequear la privacidad de las cosas (basically que no puedas acceder a los valores del mt con otra cosa que no sea get_with_proof)
     // * Refactorear para poder hacer un MT con tipos abstractos (Es decir, poner <T> en todos los metodos).
 
-    let vec: Vec<i32> = vec![0,3,4,15];
+    let vec: Vec<i32> = vec![1,-2,8];
     let mut mt = MerkleTree::new();
-    let root_hash = mt.commit(vec);
-    println!("root of the new tree: {:?}", root_hash);
+    mt.commit(vec);
+    let root_hash = mt.change_value(3, 24);
 
-    let query_result = mt.get_with_proof(1);
-
-    assert_eq!(query_result.0, 3);
     let mut hasher = DefaultHasher::new();
-    Some(query_result.0).hash(&mut hasher);
-    let mut current_hash = hasher.finish();
-    let mut index = 1;
-    for h in query_result.1.iter() {
-        let mut hasher = DefaultHasher::new();
-        if (index & 1) != 0 {
-            h.hash(&mut hasher);
-            current_hash.hash(&mut hasher);
-        } else {
-            current_hash.hash(&mut hasher);
-            h.hash(&mut hasher);
-        }
-        current_hash = hasher.finish();
-        index /= 2;
-    }
-    assert_eq!(current_hash, root_hash);
+    Some(1).hash(&mut hasher);
+    let h0: u64 = hasher.finish();
+    
+    let mut hasher = DefaultHasher::new();
+    Some(-2).hash(&mut hasher);
+    let h1: u64 = hasher.finish();
+    
+    let mut hasher = DefaultHasher::new();
+    Some(8).hash(&mut hasher);
+    let h2: u64 = hasher.finish();
+    
+    let mut hasher = DefaultHasher::new();
+    Some(24).hash(&mut hasher);
+    // Option::<i32>::None.hash(&mut hasher);
+    let h3: u64 = hasher.finish();
+    
+    let mut hasher = DefaultHasher::new();
+    h0.hash(&mut hasher);
+    h1.hash(&mut hasher);
+    let h01 = hasher.finish();
+
+    let mut hasher = DefaultHasher::new();
+    h2.hash(&mut hasher);
+    h3.hash(&mut hasher);
+    let h23 = hasher.finish();
+    
+    let mut hasher = DefaultHasher::new();
+    h01.hash(&mut hasher);
+    h23.hash(&mut hasher);
+    let h03 = hasher.finish();
+    assert_eq!(h03, root_hash);
+    
+    
 
     
     // let mut n1: Node = Node {

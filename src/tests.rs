@@ -60,6 +60,8 @@ mod test {
         let mut current_hash = hasher.finish();
         let mut index = index;
         for h in query_result.1.iter() {
+            // Here, we need to see if the node is its parent left node or right node in order to compute the hashes in the correct order.
+            // Luckily, every bit of the binary representation of the index tells us which kind of child is the node in each case.
             let mut hasher = DefaultHasher::new();
             if (index & 1) != 0 {
                 h.hash(&mut hasher);
