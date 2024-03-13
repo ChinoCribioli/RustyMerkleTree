@@ -1,9 +1,7 @@
 // rustc hello.rs && ./hello
 
 #![allow(unused_imports)]
-#![allow(unused)]
 
-// use core::panicking::panic;
 use std::default;
 use std::io;
 use std::mem::{size_of_val, swap};
@@ -51,7 +49,7 @@ impl MerkleTree {
         for index in 0..self.values.len() {
             let mut hasher = DefaultHasher::new();
             self.values[index].hash(&mut hasher);
-            let mut node: Node = Node {
+            let node: Node = Node {
                 node_hash: hasher.finish(),
                 interval: (index, index),
                 parent: None,
@@ -69,14 +67,13 @@ impl MerkleTree {
                 let mut hasher = DefaultHasher::new();
                 left_node.node_hash.hash(&mut hasher);
                 right_node.node_hash.hash(&mut hasher);
-                let mut new_node: Node = Node {
+                let new_node: Node = Node {
                     node_hash: hasher.finish(),
                     interval: (left_node.interval.0,right_node.interval.1),
                     parent: None,
                     left: Some(left_node.clone()),
                     right: Some(right_node.clone()),
                 };
-                // println!("nodo de intervalo {:?} tiene hash: {}",new_node.interval, new_node.node_hash);
                 left_node.parent = Some(Box::new(new_node.clone()));
                 right_node.parent = Some(Box::new(new_node.clone()));
                 new_level.push(Box::new(new_node.clone()));
@@ -97,7 +94,7 @@ impl MerkleTree {
         }
     }
 
-    fn get_recursive_path(node: Node, index: usize) -> Vec<(u64)> {
+    fn get_recursive_path(node: Node, index: usize) -> Vec<u64> {
         if node.interval.0 == node.interval.1 {
             return Vec::new();
         };
@@ -115,11 +112,11 @@ impl MerkleTree {
     pub fn get_with_proof(self, index: usize) -> (i32, Vec<u64>) {
         self.clone().check_index_range(index);
         let value = self.values[index].expect("There is no value at that index");
-        let mut path = Self::get_recursive_path(*self.root, index);
+        let path = Self::get_recursive_path(*self.root, index);
         (value, path)
     }
 
-    fn recalculate_hashes(self, mut node: &mut Box<Node>, index: usize) {
+    fn recalculate_hashes(self, node: &mut Node, index: usize) {
         if node.interval.0 == node.interval.1 {
             let mut hasher = DefaultHasher::new();
             self.values[index].hash(&mut hasher);
@@ -127,9 +124,9 @@ impl MerkleTree {
             return;
         };
         if Self::in_range(index, node.clone().left.expect("Node without left child").interval) {
-            self.recalculate_hashes(&mut node.left.as_mut().unwrap(), index);
+            self.recalculate_hashes(node.left.as_mut().unwrap(), index);
         } else {
-            self.recalculate_hashes(&mut node.right.as_mut().unwrap(), index);
+            self.recalculate_hashes(node.right.as_mut().unwrap(), index);
         }
         let mut hasher = DefaultHasher::new();
         node.clone().left.unwrap().node_hash.hash(&mut hasher);
@@ -140,7 +137,7 @@ impl MerkleTree {
     pub fn change_value(&mut self, index: usize, new_value: i32) -> u64 {
         self.clone().check_index_range(index);
         self.values[index] = Some(new_value);
-        self.clone().recalculate_hashes(&mut self.root, index);
+        self.clone().recalculate_hashes(self.root.as_mut(), index);
         self.root.node_hash
     }
 
@@ -167,10 +164,7 @@ fn main() {
     let vec: Vec<i32> = vec![1,-2,8];
     let mut mt = MerkleTree::new();
     mt.commit(vec);
-    MerkleTree::print_hashes(Some(mt.root.clone()));
-    println!("-------------------------------");
     let root_hash = mt.change_value(3, 24);
-    MerkleTree::print_hashes(Some(mt.root.clone()));
     
     let mut hasher = DefaultHasher::new();
     Some(1).hash(&mut hasher);
