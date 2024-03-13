@@ -119,7 +119,7 @@ impl MerkleTree {
         (value, path)
     }
 
-    fn recalculate_hashes(self, mut node: Box<Node>, index: usize) {
+    fn recalculate_hashes(self, mut node: &mut Box<Node>, index: usize) {
         if node.interval.0 == node.interval.1 {
             let mut hasher = DefaultHasher::new();
             self.values[index].hash(&mut hasher);
@@ -127,20 +127,20 @@ impl MerkleTree {
             return;
         };
         if Self::in_range(index, node.clone().left.expect("Node without left child").interval) {
-            self.recalculate_hashes(node.clone().left.unwrap(), index);
+            self.recalculate_hashes(&mut node.left.as_mut().unwrap(), index);
         } else {
-            self.recalculate_hashes(node.clone().right.unwrap(), index);
+            self.recalculate_hashes(&mut node.right.as_mut().unwrap(), index);
         }
         let mut hasher = DefaultHasher::new();
-        node.left.unwrap().node_hash.hash(&mut hasher);
-        node.right.unwrap().node_hash.hash(&mut hasher);
+        node.clone().left.unwrap().node_hash.hash(&mut hasher);
+        node.clone().right.unwrap().node_hash.hash(&mut hasher);
         node.node_hash = hasher.finish();
     }
 
     pub fn change_value(&mut self, index: usize, new_value: i32) -> u64 {
         self.clone().check_index_range(index);
         self.values[index] = Some(new_value);
-        self.clone().recalculate_hashes(self.root.clone(), index);
+        self.clone().recalculate_hashes(&mut self.root, index);
         self.root.node_hash
     }
 
@@ -168,11 +168,9 @@ fn main() {
     let mut mt = MerkleTree::new();
     mt.commit(vec);
     MerkleTree::print_hashes(Some(mt.root.clone()));
-    println!("{:?}", mt.values);
     println!("-------------------------------");
     let root_hash = mt.change_value(3, 24);
     MerkleTree::print_hashes(Some(mt.root.clone()));
-    println!("{:?}", mt.values);
     
     let mut hasher = DefaultHasher::new();
     Some(1).hash(&mut hasher);
