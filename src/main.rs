@@ -6,7 +6,7 @@
 // use core::panicking::panic;
 use std::default;
 use std::io;
-use std::mem;
+use std::mem::{size_of_val, swap};
 use std::hash::{DefaultHasher, Hash, Hasher};
 use std::thread::current;
 
@@ -140,8 +140,19 @@ impl MerkleTree {
     pub fn change_value(&mut self, index: usize, new_value: i32) -> u64 {
         self.clone().check_index_range(index);
         self.values[index] = Some(new_value);
-        self.clone().recalculate_hashes(self.clone().root, index);
+        self.clone().recalculate_hashes(self.root.clone(), index);
         self.root.node_hash
+    }
+
+    pub fn print_hashes(option_node: Option<Box<Node>>) {
+        match option_node {
+            None => return,
+            Some(node) => {
+                Self::print_hashes(node.left);
+                Self::print_hashes(node.right);
+                println!("{:?} -> {}", node.interval, node.node_hash);
+            }
+        }
     }
 
 }
@@ -156,8 +167,13 @@ fn main() {
     let vec: Vec<i32> = vec![1,-2,8];
     let mut mt = MerkleTree::new();
     mt.commit(vec);
+    MerkleTree::print_hashes(Some(mt.root.clone()));
+    println!("{:?}", mt.values);
+    println!("-------------------------------");
     let root_hash = mt.change_value(3, 24);
-
+    MerkleTree::print_hashes(Some(mt.root.clone()));
+    println!("{:?}", mt.values);
+    
     let mut hasher = DefaultHasher::new();
     Some(1).hash(&mut hasher);
     let h0: u64 = hasher.finish();
