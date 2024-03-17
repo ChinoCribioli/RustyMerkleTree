@@ -17,22 +17,31 @@ pub struct Node {
     right: Option<Box<Node>>,
 }
 
+// trait T: Hash {}
+
+trait ToHash {
+    fn hash(&self, h: &mut Hasher) {
+        self.hash(&mut h);
+    }
+}
+// impl<T: Hash> ToHash for T {}
+
 #[derive(Default, Debug, Clone)]
-pub struct MerkleTree {
+pub struct MerkleTree<T> where T: Clone, T: ToHash {
     root: Box<Node>,
-    values: Vec<Option<i32>>,
+    values: Vec<Option<T>>,
 }
 
-impl MerkleTree {
+impl<T: Clone + ToHash> MerkleTree<T> {
     
-    pub fn new() -> MerkleTree {
+    pub fn new() -> MerkleTree<T> {
         MerkleTree {
             root: Box::default(),
             values: Vec::new(),
         }
     }
     
-    pub fn commit(&mut self, values: Vec<i32>) -> u64 {
+    pub fn commit(&mut self, values: Vec<T>) -> u64 {
         assert!(self.values.len() == 0, "Cannot initialize a non-empty tree!");
         
         // We populate the self.values array, padding it to reach a power of 2 length
@@ -109,7 +118,7 @@ impl MerkleTree {
         }
     }
     
-    pub fn get_with_proof(self, index: usize) -> (i32, Vec<u64>) {
+    pub fn get_with_proof(self, index: usize) -> (T, Vec<u64>) {
         self.clone().check_index_range(index);
         let value = self.values[index].expect("There is no value at that index");
         let path = Self::get_recursive_path(*self.root, index);
@@ -134,7 +143,7 @@ impl MerkleTree {
         node.node_hash = hasher.finish();
     }
 
-    pub fn change_value(&mut self, index: usize, new_value: i32) -> u64 {
+    pub fn change_value(&mut self, index: usize, new_value: T) -> u64 {
         self.clone().check_index_range(index);
         self.values[index] = Some(new_value);
         self.clone().recalculate_hashes(self.root.as_mut(), index);
@@ -156,7 +165,6 @@ impl MerkleTree {
 
 fn main() {
     // TODO:
-    // * Hacer un sistema de testing
     // * Sacar los hashers a un metodo extra que sea tipo hash(a: T, b: T) y te devuelve el hash. El valor b puede ser opcional para hashear cosas solas
     // * Chequear la privacidad de las cosas (basically que no puedas acceder a los valores del mt con otra cosa que no sea get_with_proof)
     // * Refactorear para poder hacer un MT con tipos abstractos (Es decir, poner <T> en todos los metodos).
@@ -180,7 +188,6 @@ fn main() {
     
     let mut hasher = DefaultHasher::new();
     Some(24).hash(&mut hasher);
-    // Option::<i32>::None.hash(&mut hasher);
     let h3: u64 = hasher.finish();
     
     let mut hasher = DefaultHasher::new();
