@@ -1,5 +1,13 @@
 use std::hash::{DefaultHasher, Hash, Hasher};
 
+pub fn hash_values<Hashable>(values: Vec<Hashable>) -> u64 where Hashable: Hash {
+    let mut hasher = DefaultHasher::new();
+    for value in values.iter() {
+        value.hash(&mut hasher);
+    }
+    hasher.finish()
+}
+
 #[derive(Default, Debug, Clone)]
 pub struct Node {
     node_hash: u64,
@@ -38,10 +46,8 @@ impl<T: Clone + Hash> MerkleTree<T> {
 
         let mut nodes = Vec::new();
         for index in 0..self.values.len() {
-            let mut hasher = DefaultHasher::new();
-            self.values[index].hash(&mut hasher);
             let node: Node = Node {
-                node_hash: hasher.finish(),
+                node_hash: hash_values(vec![&self.values[index]]),
                 interval: (index, index),
                 left: None,
                 right: None,
@@ -52,13 +58,10 @@ impl<T: Clone + Hash> MerkleTree<T> {
         while nodes.len() > 1 {
             let mut new_level: Vec<Box<Node>> = Vec::new();
             for index in (0..nodes.len()).step_by(2) {
-                let mut left_node = nodes[index].clone();
-                let mut right_node = nodes[index+1].clone();
-                let mut hasher = DefaultHasher::new();
-                left_node.node_hash.hash(&mut hasher);
-                right_node.node_hash.hash(&mut hasher);
+                let left_node = nodes[index].clone();
+                let right_node = nodes[index+1].clone();
                 let new_node: Node = Node {
-                    node_hash: hasher.finish(),
+                    node_hash: hash_values(vec![left_node.node_hash, right_node.node_hash]),
                     interval: (left_node.interval.0,right_node.interval.1),
                     left: Some(left_node.clone()),
                     right: Some(right_node.clone()),
@@ -98,16 +101,14 @@ impl<T: Clone + Hash> MerkleTree<T> {
     
     pub fn get_with_proof(self, index: usize) -> (T, Vec<u64>) {
         self.clone().check_index_range(index);
-        let value = self.values[index].as_ref().expect("There is no value at that index");
+        let value = self.values[index].clone().expect("There is no value at that index");
         let path = Self::get_recursive_path(*self.root, index);
-        (value.clone(), path)
+        (value, path)
     }
 
     fn recalculate_hashes(self, node: &mut Node, index: usize) {
         if node.interval.0 == node.interval.1 {
-            let mut hasher = DefaultHasher::new();
-            self.values[index].hash(&mut hasher);
-            node.node_hash = hasher.finish();
+            node.node_hash = hash_values(vec![&self.values[index]]);
             return;
         };
         if Self::in_range(index, node.clone().left.expect("Node without left child").interval) {
@@ -115,10 +116,10 @@ impl<T: Clone + Hash> MerkleTree<T> {
         } else {
             self.recalculate_hashes(node.right.as_mut().unwrap(), index);
         }
-        let mut hasher = DefaultHasher::new();
-        node.clone().left.unwrap().node_hash.hash(&mut hasher);
-        node.clone().right.unwrap().node_hash.hash(&mut hasher);
-        node.node_hash = hasher.finish();
+        node.node_hash = hash_values(vec![
+            node.clone().left.unwrap().node_hash,
+            node.clone().right.unwrap().node_hash
+        ]);
     }
 
     pub fn change_value(&mut self, index: usize, new_value: T) -> u64 {
@@ -138,13 +139,20 @@ impl<T: Clone + Hash> MerkleTree<T> {
             }
         }
     }
-
 }
 
 fn main() {
     // TODO:
-    // * Sacar los hashers a un metodo extra que sea tipo hash(a: T, b: T) y te devuelve el hash. El valor b puede ser opcional para hashear cosas solas
     // * Chequear la privacidad de las cosas (basically que no puedas acceder a los valores del mt con otra cosa que no sea get_with_proof)
+    
+    let hash_1 = hash_values(vec![Some(0), Some(1)]);
+    let mut hasher = DefaultHasher::new();
+    Some(0).hash(&mut hasher);
+    Some(1).hash(&mut hasher);
+    let hash_2 = hasher.finish();
+    
+    assert_eq!(hash_1,hash_2);
+    
     
     let vec: Vec<u64> = vec![1,2342142,8];
     let mut mt = MerkleTree::new();
@@ -182,16 +190,4 @@ fn main() {
     h23.hash(&mut hasher);
     let h03 = hasher.finish();
     assert_eq!(h03, root_hash);
-    
-    
-
-    
-    // let mut n1: Node = Node {
-    //     name: "nodo 1",
-    //     child: None
-    // };
-    // print!("n1 usa {} bytes\n", mem::size_of_val(&n1));
-    // println!("\n{:?}", &n1);
-    // let _para_debug = mem::size_of_val(n3.name);
-
 }
