@@ -1,15 +1,12 @@
-mod merkle_tree;
-
-mod test {
+pub mod test {
     use std::hash::{DefaultHasher, Hash, Hasher};
-    use merkle_tree::MerkleTree;
-    // use crate::rand::thread_rng;
-    
+    use crate::merkle_tree::MerkleTree;
+    use rand::thread_rng;
+    use rand::Rng;
+
     pub fn test_tree_hashes() {
-        // let mut rng = thread_rng();
-        // let vec: Vec<i32> = vec![rng.gen(), rng.gen(), rng.gen()];
-        let vec: Vec<i32> = vec![2, 4, 13451];
-        // println!("{:?}", vec);
+        let mut rng = thread_rng();
+        let vec: Vec<i32> = vec![rng.gen(), rng.gen(), rng.gen()];
         let mut mt = MerkleTree::new();
         let root_hash = mt.commit(vec.clone());
 
@@ -46,13 +43,21 @@ mod test {
         assert_eq!(h03, root_hash);
     }
 
-    pub fn test_verifying_path(vec: Vec<i32>, index: usize) {
-        let mut mt = MerkleTree::new();
-        let root_hash = mt.commit(vec.clone());
+    pub fn test_verifying_path() {
+        let mut rng = thread_rng();
+        let random_size = rng.gen_range(0..10000);
+        let mut random_vec = Vec::<i64>::new();
+        for _ in 0..random_size {
+            random_vec.push(rng.gen::<i64>());
+        }
+        let index = rng.gen_range(0..random_size);
+
         
+        let mut mt = MerkleTree::new();
+        let root_hash = mt.commit(random_vec.clone());
         let query_result = mt.get_with_proof(index);
 
-        assert_eq!(query_result.0, vec[index]);
+        assert_eq!(query_result.0, random_vec[index]);
         let mut hasher = DefaultHasher::new();
         Some(query_result.0).hash(&mut hasher);
         let mut current_hash = hasher.finish();
@@ -75,51 +80,31 @@ mod test {
     }
 
     pub fn test_hashes_after_change() {
-        let vec: Vec<i32> = vec![1,-2,8];
+        let mut rng = thread_rng();
+        let mut vec= Vec::<u128>::new();
+        for _ in 0..5 {
+            vec.push(rng.gen::<u128>());
+        }
         let mut mt = MerkleTree::new();
-        mt.commit(vec);
-        let root_hash = mt.change_value(3, 24);
+        mt.commit(vec.clone());
+        
+        // Now, we are going to change the whole array of values to see if the final hash is the expected one
+        let mut new_vec= Vec::<u128>::new();
+        for _ in 0..7 {
+            new_vec.push(rng.gen::<u128>());
+        }
+        let mut last_root_hash = 0;
+        for i in 0..7 {
+            last_root_hash = mt.change_value(i, new_vec[i])
+        }
 
-        let mut hasher = DefaultHasher::new();
-        Some(1).hash(&mut hasher);
-        let h0: u64 = hasher.finish();
-
-        let mut hasher = DefaultHasher::new();
-        Some(-2).hash(&mut hasher);
-        let h1: u64 = hasher.finish();
-
-        let mut hasher = DefaultHasher::new();
-        Some(8).hash(&mut hasher);
-        let h2: u64 = hasher.finish();
-
-        let mut hasher = DefaultHasher::new();
-        Some(24).hash(&mut hasher);
-        let h3: u64 = hasher.finish();
-
-        let mut hasher = DefaultHasher::new();
-        h0.hash(&mut hasher);
-        h1.hash(&mut hasher);
-        let h01 = hasher.finish();
-
-        let mut hasher = DefaultHasher::new();
-        h2.hash(&mut hasher);
-        h3.hash(&mut hasher);
-        let h23 = hasher.finish();
-
-        let mut hasher = DefaultHasher::new();
-        h01.hash(&mut hasher);
-        h23.hash(&mut hasher);
-        let h03 = hasher.finish();
-        assert_eq!(h03, root_hash);
+        let mut new_mt = MerkleTree::new();
+        assert_eq!(last_root_hash, new_mt.commit(new_vec));
     }
-}
 
-fn main() {
-    test::test_tree_hashes();
-    test::test_verifying_path(vec![1,5,18,9,43], 0);
-    test::test_verifying_path(vec![1,5,18,9,43], 1);
-    test::test_verifying_path(vec![1,5,18,9,43], 2);
-    test::test_verifying_path(vec![1,5,18,9,43], 3);
-    test::test_verifying_path(vec![1,5,18,9,43], 4);
-    test::test_hashes_after_change();
+    pub fn main_tests() {
+        test_tree_hashes();
+        test_hashes_after_change();
+        test_verifying_path();
+    }
 }
