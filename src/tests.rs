@@ -1,3 +1,4 @@
+#[cfg(test)]
 pub mod test {
     use std::hash::{DefaultHasher, Hash, Hasher};
     use crate::merkle_tree::MerkleTree;
