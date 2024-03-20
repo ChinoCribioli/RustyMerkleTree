@@ -4,6 +4,7 @@ pub mod test {
     use rand::thread_rng;
     use rand::Rng;
 
+    #[test]
     pub fn test_tree_hashes() {
         let mut rng = thread_rng();
         let vec: Vec<i32> = vec![rng.gen(), rng.gen(), rng.gen()];
@@ -43,6 +44,7 @@ pub mod test {
         assert_eq!(h03, root_hash);
     }
 
+    #[test]
     pub fn test_verifying_path() {
         let mut rng = thread_rng();
         let random_size = rng.gen_range(0..10000);
@@ -77,6 +79,7 @@ pub mod test {
         assert_eq!(current_hash, root_hash);
     }
 
+    #[test]
     pub fn test_hashes_after_change() {
         let mut rng = thread_rng();
         let mut vec= Vec::<u128>::new();
@@ -97,11 +100,5 @@ pub mod test {
 
         let new_mt = MerkleTree::new(new_vec);
         assert_eq!(last_root_hash, new_mt.get_root_hash());
-    }
-
-    pub fn main_tests() {
-        test_tree_hashes();
-        test_hashes_after_change();
-        test_verifying_path();
     }
 }
