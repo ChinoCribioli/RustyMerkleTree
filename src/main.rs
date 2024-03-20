@@ -1,15 +1,12 @@
+#[allow(dead_code)]
+
 mod merkle_tree;
-// use merkle_tree::*;
-// use std::hash::{DefaultHasher, Hash, Hasher};
-// use rand::thread_rng;
-// use rand::Rng;
 mod test;
 use test::test::main_tests;
 
 fn main() {
     // TODO:
-    // * Chequear la privacidad de las cosas (basically que no puedas acceder a los valores del mt con otra cosa que no sea get_with_proof)
-    
+    // * Fijarse como setear para testear directo de cargo (no se si existe algun comando "cargo test" o algo asi)
     
     main_tests();
 }

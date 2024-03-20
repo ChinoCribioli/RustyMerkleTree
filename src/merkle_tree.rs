@@ -24,30 +24,22 @@ pub struct MerkleTree<T> where T: Clone, T: Hash {
 
 impl<T: Clone + Hash> MerkleTree<T> {
     
-    pub fn new() -> MerkleTree<T> {
-        MerkleTree {
-            root: Box::default(),
-            values: Vec::new(),
-        }
-    }
-    
-    pub fn commit(&mut self, values: Vec<T>) -> u64 {
-        assert!(self.values.len() == 0, "Cannot initialize a non-empty tree!");
+    pub fn new(values: Vec<T>) -> MerkleTree<T> {
+        let mut option_values: Vec<Option<T>> = Vec::new();
         
         // We populate the self.values array, padding it to reach a power of 2 length
         for value in values.iter() {
-            self.values.push(Some(value.clone()));
+            option_values.push(Some(value.clone()));
         }
         let mut pow2: usize = 1;
         while pow2 < values.len() { pow2 *= 2; }
-        self.values.append(&mut vec![None; pow2 - self.values.len()]);
-
-        assert_eq!(self.values.len(), pow2);
+        option_values.append(&mut vec![None; pow2 - option_values.len()]);
+        assert_eq!(option_values.len(), pow2);
 
         let mut nodes = Vec::new();
-        for index in 0..self.values.len() {
+        for index in 0..option_values.len() {
             let node: Node = Node {
-                node_hash: hash_values(vec![&self.values[index]]),
+                node_hash: hash_values(vec![&option_values[index]]),
                 interval: (index, index),
                 left: None,
                 right: None,
@@ -70,7 +62,13 @@ impl<T: Clone + Hash> MerkleTree<T> {
             };
             nodes = new_level;
         }
-        self.root = nodes[0].clone();
+        MerkleTree {
+            root: nodes[0].clone(),
+            values: option_values,
+        }
+    }
+
+    pub fn get_root_hash(self) -> u64 {
         self.root.node_hash
     }
 

@@ -7,8 +7,8 @@ pub mod test {
     pub fn test_tree_hashes() {
         let mut rng = thread_rng();
         let vec: Vec<i32> = vec![rng.gen(), rng.gen(), rng.gen()];
-        let mut mt = MerkleTree::new();
-        let root_hash = mt.commit(vec.clone());
+        let mt = MerkleTree::new(vec.clone());
+        let root_hash = mt.get_root_hash();
 
         let mut hasher = DefaultHasher::new();
         Some(vec[0]).hash(&mut hasher);
@@ -50,18 +50,16 @@ pub mod test {
         for _ in 0..random_size {
             random_vec.push(rng.gen::<i64>());
         }
-        let index = rng.gen_range(0..random_size);
+        let mut index = rng.gen_range(0..random_size);
 
-        
-        let mut mt = MerkleTree::new();
-        let root_hash = mt.commit(random_vec.clone());
+        let mt = MerkleTree::new(random_vec.clone());
+        let root_hash = mt.clone().get_root_hash();
         let query_result = mt.get_with_proof(index);
 
         assert_eq!(query_result.0, random_vec[index]);
         let mut hasher = DefaultHasher::new();
         Some(query_result.0).hash(&mut hasher);
         let mut current_hash = hasher.finish();
-        let mut index = index;
         for h in query_result.1.iter() {
             // Here, we need to see if the node is its parent left node or right node in order to compute the hashes in the correct order.
             // Luckily, every bit of the binary representation of the index tells us which kind of child is the node in each case.
@@ -85,8 +83,7 @@ pub mod test {
         for _ in 0..5 {
             vec.push(rng.gen::<u128>());
         }
-        let mut mt = MerkleTree::new();
-        mt.commit(vec.clone());
+        let mut mt = MerkleTree::new(vec.clone());
         
         // Now, we are going to change the whole array of values to see if the final hash is the expected one
         let mut new_vec= Vec::<u128>::new();
@@ -98,8 +95,8 @@ pub mod test {
             last_root_hash = mt.change_value(i, new_vec[i])
         }
 
-        let mut new_mt = MerkleTree::new();
-        assert_eq!(last_root_hash, new_mt.commit(new_vec));
+        let new_mt = MerkleTree::new(new_vec);
+        assert_eq!(last_root_hash, new_mt.get_root_hash());
     }
 
     pub fn main_tests() {
