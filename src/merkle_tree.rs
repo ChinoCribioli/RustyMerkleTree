@@ -24,13 +24,13 @@ pub struct MerkleTree<T> where T: Clone, T: Hash {
 
 impl<T: Clone + Copy + Hash> MerkleTree<T> {
     
-    pub fn new(values: Vec<T>) -> MerkleTree<T> {
+    pub fn new(values: &Vec<T>) -> MerkleTree<T> {
         let mut option_values: Vec<Option<T>> = Vec::new();
         
         // We populate the self.values array, padding it to reach a power of 2 length
         let values_len = values.len();
         for value in values {
-            option_values.push(Some(value));
+            option_values.push(Some(*value));
         }
         let mut pow2: usize = 1;
         while pow2 < values_len { pow2 *= 2; }

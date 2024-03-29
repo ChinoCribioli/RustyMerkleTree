@@ -9,7 +9,7 @@ pub mod test {
     pub fn test_tree_hashes() {
         let mut rng = thread_rng();
         let vec: Vec<i32> = vec![rng.gen(), rng.gen(), rng.gen()];
-        let mt = MerkleTree::new(vec.clone());
+        let mt = MerkleTree::new(&vec);
         let root_hash = mt.get_root_hash();
 
         let mut hasher = DefaultHasher::new();
@@ -55,7 +55,7 @@ pub mod test {
         }
         let mut index = rng.gen_range(0..random_size);
 
-        let mt = MerkleTree::new(random_vec.clone());
+        let mt = MerkleTree::new(&random_vec);
         let root_hash = mt.clone().get_root_hash();
         let query_result = mt.get_with_proof(index);
 
@@ -87,7 +87,7 @@ pub mod test {
         for _ in 0..5 {
             vec.push(rng.gen::<u128>());
         }
-        let mut mt = MerkleTree::new(vec.clone());
+        let mut mt = MerkleTree::new(&vec);
         
         // Now, we are going to change the whole array of values to see if the final hash is the expected one
         let mut new_vec= Vec::<u128>::new();
@@ -99,7 +99,7 @@ pub mod test {
             last_root_hash = mt.change_value(i, new_vec[i])
         }
 
-        let new_mt = MerkleTree::new(new_vec);
+        let new_mt = MerkleTree::new(&new_vec);
         assert_eq!(last_root_hash, new_mt.get_root_hash());
     }
 }
