@@ -39,13 +39,14 @@ impl<T: Clone + Copy + Hash> MerkleTree<T> {
 
         let mut nodes = Vec::new();
         for index in 0..option_values.len() {
-            let node: Node = Node {
-                node_hash: hash_values(vec![&option_values[index]]),
-                interval: (index, index),
-                left: None,
-                right: None,
-            };
-            nodes.push(Box::new(node));
+            nodes.push(Box::new(
+                Node {
+                    node_hash: hash_values(vec![&option_values[index]]),
+                    interval: (index, index),
+                    left: None,
+                    right: None,
+                }
+            ));
         }
         
         while nodes.len() > 1 {
